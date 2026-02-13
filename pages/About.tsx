@@ -13,7 +13,7 @@ const About: React.FC = () => {
         <div className="absolute inset-0 bg-stone-900/60"></div>
         <div className="relative text-center text-white">
           <h1 className="text-5xl font-bold serif mb-4">Our Legacy</h1>
-          <p className="text-[#DAA520] tracking-[0.3em] uppercase font-bold text-sm">Crafting Tradition Since 1978</p>
+          <p className="text-[#DAA520] tracking-[0.3em] uppercase font-bold text-sm">Crafting Tradition Since 2019</p>
         </div>
       </section>
 
@@ -34,7 +34,7 @@ const About: React.FC = () => {
           <div className="py-10">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
               <div>
-                <span className="block text-4xl font-bold text-[#800000] serif mb-2">45+</span>
+                <span className="block text-4xl font-bold text-[#800000] serif mb-2">5+</span>
                 <span className="text-xs uppercase font-bold tracking-widest text-stone-400">Years of Trust</span>
               </div>
               <div>

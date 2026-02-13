@@ -1,20 +1,45 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Babu's Textiles E-Commerce Platform
 
-# Run and deploy your AI Studio app
+This is a production-ready React application for Babu's Textiles.
 
-This contains everything you need to run your app locally.
+## 🚀 Getting Started Locally
 
-View your app in AI Studio: https://ai.studio/apps/drive/1dSfIReSHVBw4YM11hgjcMz-8u9uP9J0S
+1. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
 
-## Run Locally
+2. **Start Development Server**:
+   ```bash
+   npm run dev
+   ```
 
-**Prerequisites:**  Node.js
+3. **Open in Browser**:
+   Navigate to `http://localhost:3000`
 
+## 📦 Deployment to Vercel
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+1. **Push to GitHub**:
+   - Create a new repository on GitHub.
+   - Initialize git, commit all files, and push to your repository.
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git branch -M main
+   git remote add origin YOUR_GITHUB_REPO_URL
+   git push -u origin main
+   ```
+
+2. **Deploy on Vercel**:
+   - Go to [Vercel](https://vercel.com).
+   - Click **Add New** > **Project**.
+   - Import your GitHub repository.
+   - Vercel will automatically detect Vite. Click **Deploy**.
+
+## 🛠️ Tech Stack
+- **Framework**: React 19 (TypeScript)
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS
+- **Routing**: React Router 7
+- **AI Integration**: Google Gemini API (@google/genai)

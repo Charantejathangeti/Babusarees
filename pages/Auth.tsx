@@ -1,196 +1,283 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../types';
-import { LoadingSpinner, ErrorAlert } from '../constants';
+import { LoadingSpinner, ErrorAlert, Icons } from '../constants';
 
 interface AuthProps {
   setUser: (user: User | null) => void;
 }
 
 const Auth: React.FC<AuthProps> = ({ setUser }) => {
-  const [isLogin, setIsLogin] = useState(true);
+  const navigate = useNavigate();
   const [isAdminPortal, setIsAdminPortal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
+  // User OTP State
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
+  // Admin Credentials State
+  const [adminStep, setAdminStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [securityId, setSecurityId] = useState('');
-  
-  const navigate = useNavigate();
+  const [securityCode, setSecurityCode] = useState('');
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
 
-  const handleAuthentication = async (e: React.FormEvent) => {
+  // SECURE PRODUCTION CREDENTIALS
+  const MASTER_ADMIN = {
+    email: 'babustextiles@gmail.com',
+    password: 'admin@123',
+    securityCode: 'BT-1122-SEC'
+  };
+
+  useEffect(() => {
+    let interval: any;
+    if (resendTimer > 0) {
+      interval = setInterval(() => setResendTimer(prev => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  const handleUserOtpRequest = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (phone.length < 10) {
+      setError("Enter valid 10-digit number.");
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
+    await new Promise(resolve => setTimeout(resolve, 800));
+    setOtpSent(true);
+    setResendTimer(30);
+    setIsSubmitting(false);
+  };
 
-    // Simulated network and encryption delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+  const handleUserLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otp.length !== 6) {
+      setError("Enter 6-digit code.");
+      return;
+    }
+    setIsSubmitting(true);
+    setError(null);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    setUser({
+      id: `USR-${Date.now()}`,
+      name: `Member (${phone.slice(-4)})`,
+      email: `${phone}@mobile.bt`,
+      role: 'RETAIL'
+    });
+    navigate('/');
+  };
 
-    // Master Administrative Secrets (Simulation of Backend database)
-    const MASTER_ADMIN = {
-      email: 'babustextiles@gmail.com',
-      password: 'admin@123',
-      securityId: 'BT-1122-SEC'
-    };
+  const handleAdminStep1 = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isLocked) return;
+    setIsSubmitting(true);
+    setError(null);
+    await new Promise(resolve => setTimeout(resolve, 1200));
 
-    try {
-      if (isAdminPortal) {
-        // Strict Admin Verification
-        if (
-          email.toLowerCase().trim() === MASTER_ADMIN.email && 
-          password === MASTER_ADMIN.password && 
-          securityId === MASTER_ADMIN.securityId
-        ) {
-          const admin: User = {
-            id: 'admin_master_01',
-            name: 'Babu Administrator',
-            email: email,
-            role: 'ADMIN'
-          };
-          setUser(admin);
-          navigate('/admin');
-        } else {
-          throw new Error("ACCESS DENIED: Administrative credentials or Security Master ID is invalid.");
-        }
-      } else {
-        // Standard Customer Auth
-        if (isLogin) {
-          if (email.includes('@') && password.length >= 8) {
-            const user: User = {
-              id: `cust_${Date.now()}`,
-              name: email.split('@')[0],
-              email: email,
-              role: 'RETAIL'
-            };
-            setUser(user);
-            navigate('/');
-          } else {
-            throw new Error("Invalid email or password. Please check your heritage credentials.");
-          }
-        } else {
-          // Registration simulation
-          const user: User = {
-            id: `cust_${Date.now()}`,
-            name: email.split('@')[0],
-            email: email,
-            role: 'RETAIL'
-          };
-          setUser(user);
-          navigate('/');
-        }
-      }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
+    if (email.toLowerCase().trim() === MASTER_ADMIN.email && password === MASTER_ADMIN.password) {
+      setAdminStep(2);
       setIsSubmitting(false);
+    } else {
+      handleFailedAttempt();
     }
   };
 
+  const handleAdminStep2 = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isLocked) return;
+    setIsSubmitting(true);
+    setError(null);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    if (securityCode === MASTER_ADMIN.securityCode) {
+      setUser({
+        id: 'ADMIN-ROOT-01',
+        name: 'Babu Administrator',
+        email: email,
+        role: 'ADMIN'
+      });
+      navigate('/admin');
+    } else {
+      handleFailedAttempt();
+    }
+  };
+
+  const handleFailedAttempt = () => {
+    const newCount = failedAttempts + 1;
+    setFailedAttempts(newCount);
+    setIsSubmitting(false);
+    if (newCount >= 3) {
+      setIsLocked(true);
+      setError("Terminal Locked: Too many failed attempts.");
+    } else {
+      setError(`Access Denied. ${3 - newCount} attempts remaining.`);
+    }
+  };
+
+  const resetState = () => {
+    setError(null);
+    setOtpSent(false);
+    setPhone('');
+    setOtp('');
+    setEmail('');
+    setPassword('');
+    setSecurityCode('');
+    setAdminStep(1);
+    setIsLocked(false);
+    setFailedAttempts(0);
+  };
+
   return (
-    <div className="max-w-md mx-auto px-4 py-20 animate-in zoom-in-95 duration-500 bg-[#FDFBF7]">
-      <div className={`bg-white rounded-[3rem] shadow-2xl border border-stone-100 overflow-hidden transition-all duration-500 ${isAdminPortal ? 'ring-2 ring-emerald-500/20' : ''}`}>
+    <div className="min-h-[85vh] flex items-center justify-center p-4 bg-[#FDFBF7]">
+      <div className="w-full max-w-sm bg-white shadow-2xl transition-all duration-300 border border-stone-100">
         
-        {/* Portal Header */}
-        <div className={`p-10 text-center transition-colors duration-500 ${isAdminPortal ? 'bg-stone-900 text-white' : 'bg-[#064E3B] text-white'}`}>
-          <div className="mb-6 inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-3xl backdrop-blur-md">
-            {isAdminPortal ? <span className="text-3xl">🛡️</span> : <span className="text-3xl">🏛️</span>}
-          </div>
-          <h1 className="text-3xl font-bold serif mb-2 tracking-tight">
-            {isAdminPortal ? 'Admin Console' : (isLogin ? 'Member Registry' : 'New Collection Access')}
-          </h1>
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60">
-            {isAdminPortal ? 'Secure Heritage Gateway' : 'Babu’s Textiles Portal'}
-          </p>
+        {/* Universal Switcher */}
+        <div className="flex border-b border-stone-100">
+          <button 
+            onClick={() => { setIsAdminPortal(false); resetState(); }}
+            className={`flex-1 py-5 text-[9px] font-black uppercase tracking-[0.2em] transition-all ${!isAdminPortal ? 'text-[#064E3B] bg-stone-50/50 border-b-2 border-[#064E3B]' : 'text-stone-300 hover:text-stone-500'}`}
+          >
+            Customer Hub
+          </button>
+          <button 
+            onClick={() => { setIsAdminPortal(true); resetState(); }}
+            className={`flex-1 py-5 text-[9px] font-black uppercase tracking-[0.2em] transition-all ${isAdminPortal ? 'text-[#064E3B] bg-stone-50/50 border-b-2 border-[#064E3B]' : 'text-stone-300 hover:text-stone-500'}`}
+          >
+            Admin Terminal
+          </button>
         </div>
 
-        <div className="p-10">
-          {error && <div className="mb-8"><ErrorAlert message={error} /></div>}
-
-          <form onSubmit={handleAuthentication} className="space-y-6">
-            {!isLogin && !isAdminPortal && (
-              <div className="animate-in slide-in-from-top-2">
-                <label className="block text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2">Legal Identity Name</label>
-                <input 
-                  type="text" 
-                  required 
-                  className="w-full bg-stone-50 border border-stone-200 rounded-xl p-4 focus:ring-1 focus:ring-[#064E3B] outline-none transition-all font-medium text-xs" 
-                  placeholder="Full Legal Name"
-                />
-              </div>
-            )}
-            
-            <div>
-              <label className="block text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2">Registry Email</label>
-              <input 
-                type="email" 
-                required 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-stone-50 border border-stone-200 rounded-xl p-4 focus:ring-1 focus:ring-[#064E3B] outline-none transition-all font-medium text-xs" 
-                placeholder={isAdminPortal ? "Administrator ID" : "Email Address"}
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2">Access Key</label>
-              <input 
-                type="password" 
-                required 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-stone-50 border border-stone-200 rounded-xl p-4 focus:ring-1 focus:ring-[#064E3B] outline-none transition-all font-mono text-xs" 
-                placeholder="••••••••"
-              />
-            </div>
-
-            {isAdminPortal && (
-              <div className="animate-in slide-in-from-top-2">
-                <label className="block text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">Security Master ID</label>
-                <input 
-                  type="text" 
-                  required 
-                  value={securityId}
-                  onChange={(e) => setSecurityId(e.target.value)}
-                  className="w-full bg-emerald-50 border border-emerald-100 rounded-xl p-4 focus:ring-1 focus:ring-emerald-500 outline-none transition-all font-mono text-emerald-900 font-bold text-xs" 
-                  placeholder="Registry Token"
-                />
-              </div>
-            )}
-            
-            <button 
-              disabled={isSubmitting}
-              className={`w-full py-5 rounded-2xl transition-all shadow-xl disabled:opacity-70 flex items-center justify-center gap-3 tracking-[0.2em] uppercase text-[11px] font-black mt-4 text-white ${isAdminPortal ? 'bg-stone-900 hover:bg-black' : 'bg-[#064E3B] hover:bg-[#043327]'}`}
-            >
-              {isSubmitting ? <><LoadingSpinner className="scale-50 h-5 w-5" /> AUTHORIZING...</> : (isAdminPortal ? 'Log into Administrative Root' : (isLogin ? 'Enter Showroom' : 'Establish Registry'))}
-            </button>
-          </form>
-
-          <div className="mt-10 pt-8 border-t border-stone-100 flex flex-col gap-4 text-center">
-            <button 
-              onClick={() => { setIsAdminPortal(!isAdminPortal); setIsLogin(true); setError(null); }}
-              className={`text-[9px] font-black uppercase tracking-[0.25em] transition-colors ${isAdminPortal ? 'text-[#064E3B]' : 'text-emerald-700 hover:text-emerald-900'}`}
-            >
-              {isAdminPortal ? 'Customer Portal Entry' : 'Administrative Security Terminal'}
-            </button>
-            {!isAdminPortal && (
-              <button 
-                onClick={() => { setIsLogin(!isLogin); setError(null); }}
-                className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em] hover:text-[#064E3B]"
-              >
-                {isLogin ? "No registry record? Join Heritage" : "Existing collection holder? Login"}
-              </button>
-            )}
+        <div className="p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-xl font-bold serif text-stone-800 uppercase tracking-tight">
+              {isAdminPortal ? 'System Authorization' : 'Member Access'}
+            </h2>
+            <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest mt-1">
+              {isAdminPortal ? 'Official Personnel Only' : 'Registry Membership'}
+            </p>
           </div>
+
+          {error && <div className="mb-6"><ErrorAlert message={error} /></div>}
+
+          {isAdminPortal ? (
+            /* ADMIN LOGIN FORM */
+            <div className="animate-in fade-in duration-500">
+              {isLocked ? (
+                <div className="text-center py-10">
+                   <div className="text-red-600 text-3xl mb-4">⚠️</div>
+                   <p className="text-red-600 font-black text-[10px] uppercase tracking-widest">Access Restricted</p>
+                   <p className="text-stone-400 text-[9px] mt-4 italic">Please contact support for terminal unlocking.</p>
+                </div>
+              ) : adminStep === 1 ? (
+                <form onSubmit={handleAdminStep1} className="space-y-4">
+                  <div>
+                    <label className="block text-[8px] font-black text-stone-400 uppercase tracking-widest mb-1.5">Email Address</label>
+                    <input 
+                      type="email" required value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full bg-stone-50 border border-stone-200 p-3 text-[10px] font-black outline-none focus:border-[#064E3B] transition-all" 
+                      placeholder="admin@babustextiles.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[8px] font-black text-stone-400 uppercase tracking-widest mb-1.5">Password</label>
+                    <input 
+                      type="password" required value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full bg-stone-50 border border-stone-200 p-3 text-[10px] font-black outline-none focus:border-[#064E3B] transition-all" 
+                      placeholder="••••••••"
+                    />
+                  </div>
+                  <button 
+                    disabled={isSubmitting}
+                    className="w-full bg-[#064E3B] text-white py-4 font-black uppercase tracking-widest text-[9px] shadow-lg hover:bg-[#043327] transition-all disabled:opacity-50 mt-2"
+                  >
+                    {isSubmitting ? 'VERIFYING...' : 'INITIATE SESSION'}
+                  </button>
+                  <div className="pt-6 mt-6 border-t border-stone-100">
+                    <p className="text-[7px] text-stone-300 uppercase font-black tracking-widest mb-2 text-center">Demo Credentials</p>
+                    <p className="text-[8px] text-stone-400 font-bold text-center">Email: {MASTER_ADMIN.email}</p>
+                    <p className="text-[8px] text-stone-400 font-bold text-center">Pass: {MASTER_ADMIN.password}</p>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleAdminStep2} className="space-y-6">
+                  <div className="text-center">
+                    <p className="text-stone-400 text-[9px] italic mb-4">Enter secondary security key for confirmation.</p>
+                    <input 
+                      type="text" required autoFocus value={securityCode}
+                      onChange={(e) => setSecurityCode(e.target.value.toUpperCase())}
+                      className="w-full bg-stone-50 border border-stone-200 p-4 text-center text-lg font-black text-[#064E3B] outline-none tracking-widest" 
+                      placeholder="BT-XXXX"
+                    />
+                    <p className="text-[7px] text-stone-300 uppercase font-black tracking-widest mt-4">Code: {MASTER_ADMIN.securityCode}</p>
+                  </div>
+                  <button 
+                    disabled={isSubmitting}
+                    className="w-full bg-[#064E3B] text-white py-4 font-black uppercase tracking-widest text-[9px] shadow-lg disabled:opacity-50"
+                  >
+                    {isSubmitting ? 'AUTHORIZING...' : 'CONFIRM ACCESS'}
+                  </button>
+                  <button type="button" onClick={() => setAdminStep(1)} className="w-full text-[8px] font-black text-stone-400 uppercase tracking-widest text-center">Back to Credentials</button>
+                </form>
+              )}
+            </div>
+          ) : (
+            /* STANDARD RETAIL AUTH */
+            <div className="animate-in fade-in duration-500">
+              {!otpSent ? (
+                <form onSubmit={handleUserOtpRequest} className="space-y-4">
+                  <div>
+                    <label className="block text-[8px] font-black text-stone-400 uppercase tracking-widest mb-1.5">Phone Number</label>
+                    <div className="flex">
+                      <div className="bg-stone-50 border border-stone-200 px-3 py-3 text-[10px] font-black text-stone-400">+91</div>
+                      <input 
+                        type="tel" required maxLength={10} value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                        className="flex-grow bg-stone-50 border border-stone-200 p-3 text-[10px] font-black outline-none focus:border-[#064E3B] tracking-widest" 
+                        placeholder="MOBILE"
+                      />
+                    </div>
+                  </div>
+                  <button 
+                    disabled={isSubmitting || phone.length < 10}
+                    className="w-full bg-[#064E3B] text-white py-4 font-black uppercase tracking-[0.2em] text-[9px] shadow-lg hover:bg-[#043327] transition-all disabled:opacity-50 mt-2"
+                  >
+                    {isSubmitting ? 'SENDING...' : 'SEND OTP'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleUserLogin} className="space-y-6">
+                  <div className="text-center">
+                    <p className="text-stone-400 text-[9px] italic mb-4">Enter 6-digit code sent to your device.</p>
+                    <input 
+                      type="text" required maxLength={6} autoFocus value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                      className="w-full bg-stone-50 border border-stone-200 p-4 text-center text-2xl font-black text-[#064E3B] outline-none tracking-[0.4em]" 
+                      placeholder="000000"
+                    />
+                    <p className="text-[7px] text-stone-300 uppercase font-black tracking-widest mt-4">Hint: Use any 6 digits (Demo)</p>
+                  </div>
+                  <button 
+                    disabled={isSubmitting || otp.length !== 6}
+                    className="w-full bg-[#064E3B] text-white py-4 font-black uppercase tracking-[0.2em] text-[9px] shadow-lg disabled:opacity-50"
+                  >
+                    {isSubmitting ? 'VERIFYING...' : 'LOGIN'}
+                  </button>
+                  <button type="button" onClick={() => setOtpSent(false)} className="w-full text-[8px] font-black text-stone-400 uppercase tracking-widest text-center">Change Number</button>
+                </form>
+              )}
+            </div>
+          )}
         </div>
-      </div>
-      
-      <div className="mt-12 text-center opacity-30 flex flex-col items-center gap-4">
-         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-stone-400 italic">"Threads of heritage, secured by tradition."</p>
-         <div className="flex justify-center gap-3">
-            {[1,2,3].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-stone-300"></div>)}
-         </div>
       </div>
     </div>
   );

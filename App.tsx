@@ -1,11 +1,10 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { HashRouter, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Product, CartItem, User } from './types';
 import { MOCK_PRODUCTS } from './mockData';
-import { Icons, CATEGORIES, COLORS, BUSINESS_INFO as INITIAL_BUSINESS_INFO } from './constants';
+import { Icons, CATEGORIES, BRANDS as INITIAL_BRANDS, COLORS, BUSINESS_INFO as INITIAL_BUSINESS_INFO } from './constants';
 
-// --- Pages ---
+// --- Components ---
 import Home from './pages/Home';
 import ProductList from './pages/ProductList';
 import ProductDetail from './pages/ProductDetail';
@@ -16,16 +15,15 @@ import Wholesale from './pages/Wholesale';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import AdminDashboard from './pages/AdminDashboard';
+import AIStylist from './components/AIStylist';
 
-// --- Protected Route Component ---
+// --- Protected Route ---
 const ProtectedAdminRoute: React.FC<{ user: User | null, children: React.ReactNode }> = ({ user, children }) => {
-  if (!user || user.role !== 'ADMIN') {
-    return <Navigate to="/auth" replace />;
-  }
+  if (!user || user.role !== 'ADMIN') return <Navigate to="/auth" replace />;
   return <>{children}</>;
 };
 
-// --- Components ---
+// --- Header ---
 const Header: React.FC<{ 
   cartCount: number, 
   user: User | null, 
@@ -35,67 +33,65 @@ const Header: React.FC<{
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
 
+  const navLinks = [
+    { label: 'Home', path: '/' },
+    { label: 'Catalog', path: '/categories' },
+    { label: 'Wholesale', path: '/wholesale' },
+    { label: 'About', path: '/about' },
+    { label: 'Contact', path: '/contact' }
+  ];
+
   return (
-    <header className="sticky top-0 z-50 bg-white shadow-sm border-b border-stone-100">
-      <div className="bg-[#064E3B] text-white py-2 px-4 text-center text-[10px] font-bold tracking-[0.25em] uppercase">
-        AUTHENTIC SOUTH INDIAN HERITAGE | GSTIN: {businessInfo.gstin}
+    <header className="sticky top-0 z-[100] bg-white border-b border-stone-100 w-full shadow-sm">
+      <div className="bg-[#064E3B] text-white py-1.5 px-4 text-center text-[9px] font-black tracking-[0.3em] uppercase">
+        GSTIN: {businessInfo.gstin} | AUTHENTIC TIRUPATI HERITAGE
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-          <Link to="/" className="flex flex-col items-center group">
-            <span className="text-2xl font-bold tracking-tight text-[#064E3B] serif group-hover:scale-105 transition-transform">BABU’S TEXTILES</span>
-            <span className="text-[9px] tracking-[0.3em] uppercase font-black text-[#B45309]">Tirupati Heritage</span>
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex justify-between items-center h-16 md:h-20">
+          <Link to="/" className="flex flex-col items-center group shrink-0">
+            <span className="text-xl md:text-2xl font-black tracking-tighter text-[#064E3B] serif group-hover:scale-105 transition-transform uppercase">BABU’S TEXTILES</span>
+            <span className="text-[8px] tracking-[0.4em] uppercase font-black text-[#B45309]">Masterlooms</span>
           </Link>
 
-          <nav className="hidden lg:flex space-x-10">
-            {['Home', 'Categories', 'Wholesale', 'About', 'Contact'].map((item) => {
-              const path = item === 'Home' ? '/' : `/${item.toLowerCase().replace(' ', '-')}`;
-              const isActive = location.pathname === path || (path === '/categories' && location.pathname.startsWith('/categories'));
-              return (
-                <Link 
-                  key={item} 
-                  to={path}
-                  className={`text-[11px] font-black uppercase tracking-widest transition-all hover:text-[#064E3B] ${isActive ? 'text-[#064E3B] border-b-2 border-[#064E3B] pb-1' : 'text-stone-400'}`}
-                >
-                  {item}
-                </Link>
-              );
-            })}
+          <nav className="hidden lg:flex items-center space-x-8">
+            {navLinks.map((item) => (
+              <Link 
+                key={item.label} 
+                to={item.path}
+                className={`text-[10px] font-black uppercase tracking-widest transition-all hover:text-[#064E3B] ${location.pathname === item.path ? 'text-[#064E3B] border-b-2 border-[#064E3B] pb-1' : 'text-stone-400'}`}
+              >
+                {item.label}
+              </Link>
+            ))}
           </nav>
 
-          <div className="flex items-center space-x-6">
-            <Link to="/auth" className="text-stone-600 hover:text-[#064E3B] flex items-center gap-2 group">
-              <div className="p-2 bg-stone-50 rounded-full group-hover:bg-[#064E3B] group-hover:text-white transition-all">
-                <Icons.User />
+          <div className="flex items-center space-x-4 md:space-x-6">
+            <Link to="/auth" className="flex items-center gap-2 group p-2 hover:bg-stone-50 transition-all rounded-full border border-transparent hover:border-stone-100">
+              <Icons.User />
+              <div className="flex flex-col">
+                <span className="hidden lg:block text-[8px] font-black uppercase tracking-widest leading-none">
+                  {user ? user.name.split(' ')[0] : 'Member'}
+                </span>
+                {user?.role === 'ADMIN' && <span className="hidden lg:block text-[6px] font-bold text-[#B45309] uppercase tracking-widest mt-0.5">Admin</span>}
               </div>
-              {user && (
-                <div className="hidden md:flex flex-col items-start leading-none">
-                  <span className="text-[10px] font-black uppercase tracking-tighter">{user.name.split(' ')[0]}</span>
-                  <span className="text-[8px] text-[#B45309] font-bold">{user.role}</span>
-                </div>
-              )}
             </Link>
             
             {user?.role === 'ADMIN' && (
-              <div className="flex items-center gap-4 border-l border-stone-100 pl-6">
-                <Link to="/admin" className="p-2 bg-emerald-50 text-[#064E3B] rounded-full hover:bg-[#064E3B] hover:text-white transition-all shadow-sm">
-                   <Icons.Dashboard />
-                </Link>
-                <button onClick={onLogout} className="text-[9px] font-black text-red-600 hover:underline uppercase tracking-widest">Logout</button>
-              </div>
+              <Link to="/admin" className="p-2.5 bg-emerald-50 text-[#064E3B] hover:bg-[#064E3B] hover:text-white transition-all rounded-full hidden sm:flex items-center justify-center">
+                 <Icons.Dashboard />
+              </Link>
             )}
 
-            <Link to="/cart" className="text-stone-600 hover:text-[#064E3B] relative group">
-              <div className="p-2 bg-stone-50 rounded-full group-hover:bg-[#064E3B] group-hover:text-white transition-all">
-                <Icons.Cart />
-              </div>
+            <Link to="/cart" className="relative p-2 hover:bg-stone-50 rounded-full transition-all">
+              <Icons.Cart />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#B45309] text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center shadow-lg border-2 border-white">
+                <span className="absolute -top-0 -right-0 bg-[#B45309] text-white text-[8px] font-black rounded-full w-4 h-4 flex items-center justify-center shadow-lg border border-white">
                   {cartCount}
                 </span>
               )}
             </Link>
+            
             <button className="lg:hidden text-stone-600" onClick={() => setIsMenuOpen(!isMenuOpen)}>
               {isMenuOpen ? <Icons.X /> : <Icons.Menu />}
             </button>
@@ -104,23 +100,16 @@ const Header: React.FC<{
       </div>
 
       {isMenuOpen && (
-        <div className="lg:hidden bg-white border-t border-stone-100 p-6 absolute w-full left-0 animate-in slide-in-from-top duration-300 shadow-2xl">
+        <div className="lg:hidden bg-white border-t border-stone-100 p-8 absolute w-full left-0 shadow-2xl animate-in slide-in-from-top duration-300 z-[110]">
           <nav className="flex flex-col space-y-6">
-            {['Home', 'Categories', 'Wholesale', 'About', 'Contact'].map((item) => (
-              <Link 
-                key={item} 
-                to={item === 'Home' ? '/' : `/${item.toLowerCase()}`}
-                className="text-sm font-black uppercase tracking-[0.2em] text-stone-800"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {item}
-              </Link>
+            {navLinks.map((item) => (
+              <Link key={item.label} to={item.path} className="text-xs font-black uppercase tracking-widest" onClick={() => setIsMenuOpen(false)}>{item.label}</Link>
             ))}
-            {user?.role === 'ADMIN' && (
-              <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="text-sm font-black uppercase tracking-[0.2em] text-[#B45309]">Admin Dashboard</Link>
-            )}
-            {user && (
-               <button onClick={() => { onLogout(); setIsMenuOpen(false); }} className="text-sm font-black uppercase tracking-[0.2em] text-red-600 text-left">Logout Account</button>
+            {user?.role === 'ADMIN' && <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="text-xs font-black uppercase text-[#B45309]">Admin Terminal</Link>}
+            {user ? (
+              <button onClick={() => { onLogout(); setIsMenuOpen(false); }} className="text-xs font-black uppercase text-red-600 text-left">Logout Account</button>
+            ) : (
+              <Link to="/auth" onClick={() => setIsMenuOpen(false)} className="text-xs font-black uppercase text-[#064E3B]">Login to Registry</Link>
             )}
           </nav>
         </div>
@@ -129,77 +118,54 @@ const Header: React.FC<{
   );
 };
 
+// --- Ultra Compact Green Footer with Horizontal Links ---
 const Footer: React.FC<{ businessInfo: typeof INITIAL_BUSINESS_INFO }> = ({ businessInfo }) => (
-  <footer className="bg-[#031d16] text-white border-t-2 border-[#B45309]">
-    <div className="max-w-7xl mx-auto px-6 py-16">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-16 text-center md:text-left">
-        
-        {/* BRAND COLUMN */}
-        <div className="flex flex-col gap-6">
-          <div className="space-y-1">
-            <h3 className="text-2xl font-bold serif tracking-tight text-white uppercase">BABU’S TEXTILES</h3>
-            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-[#B45309]">Legacy Since 1978</p>
-          </div>
-          <p className="text-[11px] leading-relaxed text-stone-300 font-medium italic max-w-xs mx-auto md:mx-0">
-            Preserving the spiritual essence of South Indian handlooms through master craftsmanship and generational heritage.
-          </p>
-          <div className="flex flex-wrap justify-center md:justify-start gap-6">
-            {['Home', 'Categories', 'Wholesale', 'Contact'].map(item => (
-              <Link key={item} to={item === 'Home' ? '/' : `/${item.toLowerCase()}`} className="text-[9px] font-black uppercase tracking-widest text-stone-400 hover:text-[#B45309] transition-colors">{item}</Link>
-            ))}
+  <footer className="bg-[#064E3B] text-white w-full mt-auto">
+    <div className="border-b border-white/5 py-3">
+      <div className="max-w-7xl mx-auto px-4 flex flex-wrap justify-center md:justify-between items-center gap-x-12 gap-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px]">⭐</span>
+          <div className="flex flex-col">
+            <span className="text-[7px] font-black uppercase tracking-widest text-white leading-none">100% AUTHENTIC HANDLOOM</span>
+            <span className="text-[6px] font-bold uppercase tracking-widest text-[#DAA520]/60 leading-tight">Verified Heritage Registry</span>
           </div>
         </div>
-
-        {/* SHOWROOM COLUMN - CONSOLIDATED ADDRESS */}
-        <div className="flex flex-col gap-6">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#B45309] border-b border-white/10 pb-2 inline-block">Heritage Showroom</h4>
-          <div className="space-y-6">
-            {/* Address forced to one line on larger screens, normal on mobile for readability */}
-            <p className="text-sm md:text-base serif font-semibold text-white leading-snug whitespace-normal md:whitespace-nowrap overflow-hidden text-ellipsis">
-              {businessInfo.address}
-            </p>
-            <div className="pt-2">
-               <p className="text-[9px] font-black text-stone-500 uppercase tracking-widest mb-1">Authorized Registry ID</p>
-               <p className="text-xs font-bold text-stone-200 tracking-wider">{businessInfo.gstin}</p>
-            </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px]">💎</span>
+          <div className="flex flex-col">
+            <span className="text-[7px] font-black uppercase tracking-widest text-white leading-none">QUALITY ASSURED FABRICS</span>
+            <span className="text-[6px] font-bold uppercase tracking-widest text-[#DAA520]/60 leading-tight">Triple-Grade Yarns</span>
           </div>
         </div>
-
-        {/* CONTACT COLUMN - ENHANCED VISIBILITY */}
-        <div className="flex flex-col gap-6 md:items-end md:text-right">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#B45309] border-b border-white/10 pb-2 inline-block">Direct Contact</h4>
-          <div className="space-y-6">
-            <div className="space-y-1">
-              <p className="text-[9px] font-black text-stone-500 uppercase tracking-widest">Heritage Helpline</p>
-              {businessInfo.contact.map(num => (
-                <a key={num} href={`tel:${num.replace(/\s/g, '')}`} className="block text-xl font-bold text-white hover:text-[#B45309] transition-colors serif tracking-tight">
-                  {num}
-                </a>
-              ))}
-            </div>
-            <div className="space-y-1">
-              <p className="text-[9px] font-black text-stone-500 uppercase tracking-widest">Electronic Mail</p>
-              <a href="mailto:care@babustextiles.com" className="text-sm font-bold text-stone-200 hover:text-[#B45309] transition-colors underline decoration-stone-700 underline-offset-4">care@babustextiles.com</a>
-            </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px]">🤝</span>
+          <div className="flex flex-col">
+            <span className="text-[7px] font-black uppercase tracking-widest text-white leading-none">TRUSTED SINCE 2019</span>
+            <span className="text-[6px] font-bold uppercase tracking-widest text-[#DAA520]/60 leading-tight">Direct Weaver Partners</span>
           </div>
         </div>
       </div>
+    </div>
 
-      {/* BOTTOM BAR */}
-      <div className="mt-20 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
-        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-stone-500">
-          © 2024 Babu’s Textiles Heritage Terminal. All Rights Reserved.
-        </p>
-        <div className="flex items-center gap-10 opacity-40 grayscale hover:grayscale-0 transition-all">
-           <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
-              <span className="text-[9px] font-black tracking-widest uppercase text-stone-400">Secured Heritage Gateway</span>
-           </div>
-           <div className="flex items-center gap-4">
-              <span className="text-[10px] font-black text-stone-300">VISA</span>
-              <span className="text-[10px] font-black text-stone-300">UPI</span>
-              <span className="text-[10px] font-black text-stone-300">RUPAY</span>
-           </div>
+    <div className="py-4 bg-black/10">
+      <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="flex items-center gap-3">
+          <span className="text-[9px] font-black serif text-[#DAA520] uppercase tracking-tighter">BABU’S TEXTILES</span>
+          <span className="text-white/10 text-[10px]">|</span>
+          <span className="text-[7px] font-black text-white/40 uppercase tracking-[0.2em]">GSTIN: {businessInfo.gstin}</span>
+        </div>
+
+        <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2">
+          <Link to="/" className="text-[7px] font-black text-white/50 hover:text-[#DAA520] uppercase tracking-widest transition-all">Home</Link>
+          <Link to="/categories" className="text-[7px] font-black text-white/50 hover:text-[#DAA520] uppercase tracking-widest transition-all">Catalog</Link>
+          <Link to="/wholesale" className="text-[7px] font-black text-white/50 hover:text-[#DAA520] uppercase tracking-widest transition-all">Wholesale</Link>
+          <Link to="/about" className="text-[7px] font-black text-white/50 hover:text-[#DAA520] uppercase tracking-widest transition-all">Legacy</Link>
+          <Link to="/contact" className="text-[7px] font-black text-white/50 hover:text-[#DAA520] uppercase tracking-widest transition-all">Contact</Link>
+          <Link to="/auth" className="text-[7px] font-black text-white/50 hover:text-[#DAA520] uppercase tracking-widest transition-all">Login</Link>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.3em]">© 2024 MASTERLOOMS</span>
         </div>
       </div>
     </div>
@@ -208,25 +174,20 @@ const Footer: React.FC<{ businessInfo: typeof INITIAL_BUSINESS_INFO }> = ({ busi
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+  const [brands, setBrands] = useState<string[]>(INITIAL_BRANDS);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [businessInfo, setBusinessInfo] = useState(INITIAL_BUSINESS_INFO);
 
-  // Restore session
   useEffect(() => {
     const savedUser = localStorage.getItem('bt_user_session');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+    if (savedUser) setUser(JSON.parse(savedUser));
   }, []);
 
   const handleSetUser = (u: User | null) => {
     setUser(u);
-    if (u) {
-      localStorage.setItem('bt_user_session', JSON.stringify(u));
-    } else {
-      localStorage.removeItem('bt_user_session');
-    }
+    if (u) localStorage.setItem('bt_user_session', JSON.stringify(u));
+    else localStorage.removeItem('bt_user_session');
   };
 
   const handleLogout = () => {
@@ -237,17 +198,12 @@ export default function App() {
   const addToCart = (product: Product, quantity: number = 1) => {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
-      if (existing) {
-        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item);
-      }
+      if (existing) return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item);
       return [...prev, { ...product, quantity }];
     });
   };
 
-  const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.id !== productId));
-  };
-
+  const removeFromCart = (productId: string) => setCart(prev => prev.filter(item => item.id !== productId));
   const updateQuantity = (productId: string, quantity: number) => {
     if (quantity <= 0) return removeFromCart(productId);
     setCart(prev => prev.map(item => item.id === productId ? { ...item, quantity } : item));
@@ -257,13 +213,13 @@ export default function App() {
 
   return (
     <HashRouter>
-      <div className="min-h-screen flex flex-col bg-[#FDFBF7]">
+      <div className="min-h-screen flex flex-col bg-[#F9F6F0] w-full overflow-x-hidden">
         <Header cartCount={cartCount} user={user} onLogout={handleLogout} businessInfo={businessInfo} />
-        <main className="flex-grow">
+        <main className="flex-grow w-full">
           <Routes>
             <Route path="/" element={<Home products={products} addToCart={addToCart} />} />
-            <Route path="/categories" element={<ProductList products={products} addToCart={addToCart} />} />
-            <Route path="/categories/:category" element={<ProductList products={products} addToCart={addToCart} />} />
+            <Route path="/categories" element={<ProductList products={products} brands={brands} addToCart={addToCart} />} />
+            <Route path="/categories/:category" element={<ProductList products={products} brands={brands} addToCart={addToCart} />} />
             <Route path="/product/:id" element={<ProductDetail products={products} addToCart={addToCart} />} />
             <Route path="/cart" element={<Cart cart={cart} updateQuantity={updateQuantity} removeFromCart={removeFromCart} />} />
             <Route path="/checkout" element={<Checkout cart={cart} user={user} />} />
@@ -275,13 +231,14 @@ export default function App() {
               path="/admin" 
               element={
                 <ProtectedAdminRoute user={user}>
-                  <AdminDashboard user={user} products={products} setProducts={setProducts} businessInfo={businessInfo} setBusinessInfo={setBusinessInfo} />
+                  <AdminDashboard user={user} products={products} setProducts={setProducts} brands={brands} setBrands={setBrands} businessInfo={businessInfo} setBusinessInfo={setBusinessInfo} />
                 </ProtectedAdminRoute>
               } 
             />
           </Routes>
         </main>
         <Footer businessInfo={businessInfo} />
+        <AIStylist products={products} />
       </div>
     </HashRouter>
   );

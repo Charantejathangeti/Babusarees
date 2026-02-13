@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Product } from '../types';
 import { Icons, LoadingSpinner, ErrorAlert } from '../constants';
 
@@ -11,6 +11,7 @@ interface ProductDetailProps {
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ products, addToCart }) => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'details' | 'care' | 'shipping'>('details');
@@ -36,6 +37,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ products, addToCart }) =>
   useEffect(() => {
     loadProduct();
   }, [loadProduct]);
+
+  const handleBuyNow = () => {
+    if (product) {
+      addToCart(product, quantity);
+      navigate('/checkout');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -106,18 +114,34 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ products, addToCart }) =>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 pt-10 border-t border-stone-100">
-            <div className="flex items-center border border-stone-200 bg-white">
-              <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-6 py-4 hover:bg-stone-50 text-stone-800">-</button>
-              <span className="px-6 py-4 min-w-[3rem] text-center font-black text-lg">{quantity}</span>
-              <button onClick={() => setQuantity(quantity + 1)} className="px-6 py-4 hover:bg-stone-50 text-stone-800">+</button>
+          <div className="space-y-4 pt-10 border-t border-stone-100">
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Qty Selector */}
+              <div className="flex items-center border border-stone-200 bg-white">
+                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-5 py-4 hover:bg-stone-50 text-stone-800 transition-colors">-</button>
+                <span className="px-5 py-4 min-w-[3.5rem] text-center font-black text-lg">{quantity}</span>
+                <button onClick={() => setQuantity(quantity + 1)} className="px-5 py-4 hover:bg-stone-50 text-stone-800 transition-colors">+</button>
+              </div>
+              
+              <button 
+                onClick={() => addToCart(product, quantity)}
+                className="flex-grow bg-stone-100 hover:bg-stone-200 text-stone-700 font-black py-4 px-6 transition-all tracking-widest uppercase text-[10px] border border-stone-200"
+              >
+                ADD TO CART
+              </button>
             </div>
+
             <button 
-              onClick={() => addToCart(product, quantity)}
-              className="flex-grow bg-[#064E3B] hover:bg-[#043327] text-white font-black py-4 px-10 transition-all shadow-lg tracking-widest uppercase text-xs"
+              onClick={handleBuyNow}
+              className="w-full bg-[#064E3B] hover:bg-[#043327] text-white font-black py-5 px-10 transition-all shadow-xl tracking-[0.2em] uppercase text-[11px] flex items-center justify-center gap-3 active:scale-[0.99]"
             >
-              COMMIT TO CART
+              <Icons.ShoppingBag />
+              BUY IT NOW
             </button>
+            
+            <p className="text-[9px] text-center text-stone-400 font-bold uppercase tracking-widest pt-2">
+              Secured Heritage Checkout Gateway
+            </p>
           </div>
         </div>
       </div>

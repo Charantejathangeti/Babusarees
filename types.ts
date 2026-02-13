@@ -12,6 +12,8 @@ export interface Product {
   images: string[];
   description: string;
   colors: string[];
+  rating: number;
+  reviewsCount: number;
   isFeatured?: boolean;
   isBestSeller?: boolean;
 }
@@ -36,7 +38,7 @@ export interface User {
   role: 'RETAIL' | 'WHOLESALE' | 'ADMIN';
 }
 
-export type SortOption = 'price-low' | 'price-high' | 'newest' | 'popularity';
+export type SortOption = 'relevance' | 'price-low' | 'price-high' | 'newest' | 'popularity' | 'rating';
 
 export interface FilterState {
   category: string[];
@@ -44,4 +46,6 @@ export interface FilterState {
   fabric: string[];
   priceRange: [number, number];
   color: string[];
+  rating: number | null;
+  availability: 'in-stock' | 'all';
 }
